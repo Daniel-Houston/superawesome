@@ -1,20 +1,9 @@
-#!/bin/sh
-NAME="superawesome"
-USAGE="usage: $0 <remote-host>"
-if [ "$#" -ne 1  ]; then
-	echo "You must specify the remote host to which to deploy $NAME"
-	echo $USAGE
+#!/bin/bash
+if [ ! -f $1 ]; then
+	echo "Usage: $0 <executable to deploy>"
 	exit 1
 fi
-
-if [ "$1" = "-h" ]; then
-	echo $USAGE
-	exit 1
-fi
-
-HOST=$1
-
-echo "Building $NAME"
-env GOOS=linux GOARCH=arm GOARM=6 go build -o $NAME 
-echo "Deploying $NAME"
-scp $NAME $HOST:
+sudo mv $1 /srv/
+sudo pushd /srv/
+./$1 & 
+disown
