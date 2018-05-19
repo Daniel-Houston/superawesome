@@ -1,7 +1,6 @@
 #!/bin/sh
 BINARY="superawesome"
 DEPLOY="deploy.sh"
-CONFIG="config.json"
 USAGE="usage: $0 <remote-host>"
 if [ "$#" -ne 1  ]; then
 	echo "You must specify the remote host to which to deploy $BINARY"
@@ -25,4 +24,3 @@ env GOOS=linux GOARCH=arm GOARM=6 go build -o $BINARY
 echo "Uploading $BINARY and $DEPLOY"
 scp $BINARY $HOST: 
 scp $DEPLOY $HOST:
-scp $CONFIG $HOST:
