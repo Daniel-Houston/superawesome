@@ -21,7 +21,10 @@ type Configuration struct {
 	FromEmail  string
 	SmtpServer string
 	SmtpPort   string
-	ToEmails   []string
+}
+
+type Recipients struct {
+	Emails []string
 }
 
 type Service struct {
@@ -29,7 +32,6 @@ type Service struct {
 	SmtpServer string
 	SmtpPort   string
 	FromEmail  string
-	ToEmails   []string
 }
 
 func main() {
@@ -71,7 +73,6 @@ func NewService(c *Configuration) (*Service, error) {
 		SmtpServer: c.SmtpServer,
 		SmtpPort:   c.SmtpPort,
 		FromEmail:  c.FromEmail,
-		ToEmails:   c.ToEmails,
 	}, nil
 }
 
@@ -87,6 +88,20 @@ func loadConfiguration(c *Configuration) error {
 	}
 
 	log.Print("Finished Loading Configuration from " + configFile)
+	return nil
+}
+
+func loadRecipients(r *Recipients) error {
+	configFile := "recipients.json"
+	file, _ := os.Open(configFile)
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	err := decoder.Decode(r)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -108,16 +123,24 @@ func (s *Service) ComplimentHandler(w http.ResponseWriter, req *http.Request) {
 	doc, _ := html.Parse(resp.Body)
 
 	compliment := doc.FirstChild.FirstChild.NextSibling.FirstChild.Data
+
 	err = s.sendComplimentInEmail(compliment)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(w, fmt.Sprintf("Unable to send compliment: %v", err))
 	}
+
 	io.WriteString(w, "Wrote Compliment: "+compliment)
 }
 
 func (s *Service) sendComplimentInEmail(compliment string) error {
-	if err := smtp.SendMail(s.SmtpServer+":"+s.SmtpPort, s.Auth, s.FromEmail, s.ToEmails, []byte(compliment)); err != nil {
+	// Load the recipients at real time so we can change them without having to reboot the service
+	var r Recipients
+	if err := loadRecipients(&r); err != nil {
+		return err
+	}
+
+	if err := smtp.SendMail(s.SmtpServer+":"+s.SmtpPort, s.Auth, s.FromEmail, r.Emails, []byte(compliment)); err != nil {
 		return err
 	}
 
