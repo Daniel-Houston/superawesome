@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"syscall"
 
+	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/html"
 )
 
@@ -17,7 +19,6 @@ const basePath = "/api"
 type Configuration struct {
 	Port       string `json:"Port,omitempty"`
 	FromEmail  string
-	Password   string
 	SmtpServer string
 	SmtpPort   string
 	ToEmails   []string
@@ -44,7 +45,10 @@ func main() {
 		port = c.Port
 	}
 
-	service := NewService(&c)
+	service, err := NewService(&c)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Could not create service: %v", err))
+	}
 
 	mux.HandleFunc(basePath+"/heartbeat", service.HeartbeatHandler)
 	mux.HandleFunc(basePath+"/compliment", service.ComplimentHandler)
@@ -52,15 +56,23 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
-func NewService(c *Configuration) *Service {
-	auth := smtp.PlainAuth("", c.FromEmail, c.Password, c.SmtpServer)
+func NewService(c *Configuration) (*Service, error) {
+	fmt.Print("Enter Email Account Password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	// Pring newline because ReadPassword doesn't add a newline
+	fmt.Println("")
+	if err != nil {
+		return nil, err
+	}
+	password := string(bytePassword)
+	auth := smtp.PlainAuth("", c.FromEmail, password, c.SmtpServer)
 	return &Service{
 		Auth:       auth,
 		SmtpServer: c.SmtpServer,
 		SmtpPort:   c.SmtpPort,
 		FromEmail:  c.FromEmail,
 		ToEmails:   c.ToEmails,
-	}
+	}, nil
 }
 
 func loadConfiguration(c *Configuration) error {
