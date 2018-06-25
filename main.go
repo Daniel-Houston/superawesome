@@ -109,7 +109,11 @@ func (s *Service) HeartbeatHandler(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "Hello World")
 }
 
-func (s *Service) ComplimentHandler(w http.ResponseWriter, req *http.Request) {
+func retrieveComplimentFromDB() {
+	query := "SELECT rowid, compliment from compliments where used is NULL order by type desc, rowid asc limit 1;"
+}
+
+func retrieveComplimentFromApi() {
 	// Compliment API found at https://github.com/srobertson421/compliment-api
 	complimentUrl := "https://compliment-api.herokuapp.com/"
 
@@ -122,8 +126,11 @@ func (s *Service) ComplimentHandler(w http.ResponseWriter, req *http.Request) {
 
 	doc, _ := html.Parse(resp.Body)
 
-	compliment := doc.FirstChild.FirstChild.NextSibling.FirstChild.Data
+	return doc.FirstChild.FirstChild.NextSibling.FirstChild.Data
+}
 
+func (s *Service) ComplimentHandler(w http.ResponseWriter, req *http.Request) {
+	compliment = retrieveComplimentFromDB()
 	err = s.sendComplimentInEmail(compliment)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
